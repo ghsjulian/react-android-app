@@ -10,6 +10,9 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
 
       - name: Checkout repository
@@ -18,7 +21,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
         run: npm install
@@ -26,11 +30,14 @@ jobs:
       - name: Build React
         run: npm run build
 
-      - name: Install Capacitor
+      - name: Install Capacitor Android
         run: npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: Sync Capacitor
-        run: npx cap sync
+      - name: Ensure Android Platform Exists
+        run: |
+          npx cap init MyApp com.my.reactapp --web-dir dist || true
+          npx cap add android || true
+          npx cap sync
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -38,10 +45,12 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      - name: Grant Gradle Permission
+        run: chmod +x android/gradlew
+
       - name: Build APK
         run: |
           cd android
-          chmod +x gradlew
           ./gradlew assembleDebug
 
       - name: Upload APK
